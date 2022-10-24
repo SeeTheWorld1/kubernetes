@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package iptables
 
 //
@@ -37,12 +38,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/linkscount"
 	"k8s.io/kubernetes/pkg/proxy/metaproxier"
 	"k8s.io/kubernetes/pkg/proxy/metrics"
 	utilproxy "k8s.io/kubernetes/pkg/proxy/util"
@@ -55,7 +57,6 @@ import (
 )
 
 const (
-
 	// the services chain
 	kubeServicesChain utiliptables.Chain = "KUBE-SERVICES"
 
@@ -83,14 +84,12 @@ const (
 
 // KernelCompatTester tests whether the required kernel capabilities are
 // present to run the iptables proxier.
-
 type KernelCompatTester interface {
 	IsCompatible() error
 }
 
 // CanUseIPTablesProxier returns true if we should use the iptables Proxier
 // instead of the "classic" userspace Proxier.
-
 func CanUseIPTablesProxier(kcompat KernelCompatTester) (bool, error) {
 	if err := kcompat.IsCompatible(); err != nil {
 		return false, err
@@ -106,7 +105,6 @@ type LinuxKernelCompatTester struct{}
 // IsCompatible checks for the required sysctls.  We don't care about the value, just
 // that it exists.  If this Proxier is chosen, we'll initialize it as we
 // need.
-
 func (lkct LinuxKernelCompatTester) IsCompatible() error {
 	_, err := utilsysctl.New().GetSysctl(sysctlRouteLocalnet)
 	return err
@@ -116,7 +114,6 @@ const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
 const sysctlBridgeCallIPTables = "net/bridge/bridge-nf-call-iptables"
 
 // internal struct for string service information
-
 type serviceInfo struct {
 	*proxy.BaseServiceInfo
 	// The following fields are computed and stored for performance reasons.
@@ -128,7 +125,6 @@ type serviceInfo struct {
 }
 
 // returns a new proxy.ServicePort which abstracts a serviceInfo
-
 func newServiceInfo(port *v1.ServicePort, service *v1.Service, baseInfo *proxy.BaseServiceInfo) proxy.ServicePort {
 	info := &serviceInfo{BaseServiceInfo: baseInfo}
 
@@ -146,7 +142,6 @@ func newServiceInfo(port *v1.ServicePort, service *v1.Service, baseInfo *proxy.B
 }
 
 // internal struct for endpoints information
-
 type endpointsInfo struct {
 	*proxy.BaseEndpointInfo
 
@@ -154,7 +149,6 @@ type endpointsInfo struct {
 }
 
 // returns a new proxy.Endpoint which abstracts a endpointsInfo
-
 func newEndpointInfo(baseInfo *proxy.BaseEndpointInfo, svcPortName *proxy.ServicePortName) proxy.Endpoint {
 	return &endpointsInfo{
 		BaseEndpointInfo: baseInfo,
@@ -163,7 +157,6 @@ func newEndpointInfo(baseInfo *proxy.BaseEndpointInfo, svcPortName *proxy.Servic
 }
 
 // Equal overrides the Equal() function implemented by proxy.BaseEndpointInfo.
-
 func (e *endpointsInfo) Equal(other proxy.Endpoint) bool {
 	o, ok := other.(*endpointsInfo)
 	if !ok {
@@ -178,7 +171,6 @@ func (e *endpointsInfo) Equal(other proxy.Endpoint) bool {
 
 // Proxier is an iptables based proxy for connections between a localhost:lport
 // and services that provide the actual backends.
-
 type Proxier struct {
 	// endpointsChanges and serviceChanges contains all changes to endpoints and
 	// services that happened since iptables was synced. For a single object,
@@ -249,7 +241,6 @@ var _ proxy.Provider = &Proxier{}
 // Once a proxier is created, it will keep iptables up to date in the background and
 // will not terminate if a particular iptables call fails.
 func NewProxier(ipt utiliptables.Interface,
-
 	sysctl utilsysctl.Interface,
 	exec utilexec.Interface,
 	syncPeriod time.Duration,
@@ -262,7 +253,6 @@ func NewProxier(ipt utiliptables.Interface,
 	recorder events.EventRecorder,
 	healthzServer healthcheck.ProxierHealthUpdater,
 	nodePortAddresses []string,
-
 ) (*Proxier, error) {
 	if utilproxy.ContainsIPv4Loopback(nodePortAddresses) {
 		// Set the route_localnet sysctl we need for exposing NodePorts on loopback addresses
@@ -346,7 +336,6 @@ func NewProxier(ipt utiliptables.Interface,
 
 // NewDualStackProxier creates a MetaProxier instance, with IPv4 and IPv6 proxies.
 func NewDualStackProxier(
-
 	ipt [2]utiliptables.Interface,
 	sysctl utilsysctl.Interface,
 	exec utilexec.Interface,
@@ -360,7 +349,6 @@ func NewDualStackProxier(
 	recorder events.EventRecorder,
 	healthzServer healthcheck.ProxierHealthUpdater,
 	nodePortAddresses []string,
-
 ) (proxy.Provider, error) {
 	// Create an ipv4 instance of the single-stack proxier
 	ipFamilyMap := utilproxy.MapCIDRsByIPFamily(nodePortAddresses)
@@ -404,7 +392,6 @@ var iptablesEnsureChains = []struct {
 	table utiliptables.Table
 	chain utiliptables.Chain
 }{
-
 	{utiliptables.TableNAT, KubeMarkDropChain},
 }
 
@@ -415,7 +402,6 @@ var iptablesCleanupOnlyChains = []iptablesJumpChain{
 
 // CleanupLeftovers removes all iptables rules and chains created by the Proxier
 // It returns true if an error was encountered. Errors are logged.
-
 func CleanupLeftovers(ipt utiliptables.Interface) (encounteredError bool) {
 	// Unlink our chains
 	for _, jump := range append(iptablesJumpChains, iptablesCleanupOnlyChains...) {
@@ -502,7 +488,6 @@ func computeProbability(n int) string {
 }
 
 // This assumes proxier.mu is held
-
 func (proxier *Proxier) precomputeProbabilities(numberOfPrecomputed int) {
 	if len(proxier.precomputedProbabilities) == 0 {
 		proxier.precomputedProbabilities = append(proxier.precomputedProbabilities, "<bad value>")
@@ -513,7 +498,6 @@ func (proxier *Proxier) precomputeProbabilities(numberOfPrecomputed int) {
 }
 
 // This assumes proxier.mu is held
-
 func (proxier *Proxier) probability(n int) string {
 	if n >= len(proxier.precomputedProbabilities) {
 		proxier.precomputeProbabilities(n)
@@ -522,7 +506,6 @@ func (proxier *Proxier) probability(n int) string {
 }
 
 // Sync is called to synchronize the proxier state to iptables as soon as possible.
-
 func (proxier *Proxier) Sync() {
 	if proxier.healthzServer != nil {
 		proxier.healthzServer.QueuedUpdate()
@@ -532,7 +515,6 @@ func (proxier *Proxier) Sync() {
 }
 
 // SyncLoop runs periodic work.  This is expected to run as a goroutine or as the main loop of the app.  It does not return.
-
 func (proxier *Proxier) SyncLoop() {
 	// Update healthz timestamp at beginning in case Sync() never succeeds.
 	if proxier.healthzServer != nil {
@@ -558,14 +540,12 @@ func (proxier *Proxier) isInitialized() bool {
 
 // OnServiceAdd is called whenever creation of new service object
 // is observed.
-
 func (proxier *Proxier) OnServiceAdd(service *v1.Service) {
 	proxier.OnServiceUpdate(nil, service)
 }
 
 // OnServiceUpdate is called whenever modification of an existing
 // service object is observed.
-
 func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) {
 	if proxier.serviceChanges.Update(oldService, service) && proxier.isInitialized() {
 		proxier.Sync()
@@ -574,7 +554,6 @@ func (proxier *Proxier) OnServiceUpdate(oldService, service *v1.Service) {
 
 // OnServiceDelete is called whenever deletion of an existing service
 // object is observed.
-
 func (proxier *Proxier) OnServiceDelete(service *v1.Service) {
 	proxier.OnServiceUpdate(service, nil)
 
@@ -582,7 +561,6 @@ func (proxier *Proxier) OnServiceDelete(service *v1.Service) {
 
 // OnServiceSynced is called once all the initial event handlers were
 // called and the state is fully propagated to local cache.
-
 func (proxier *Proxier) OnServiceSynced() {
 	proxier.mu.Lock()
 	proxier.servicesSynced = true
@@ -595,7 +573,6 @@ func (proxier *Proxier) OnServiceSynced() {
 
 // OnEndpointSliceAdd is called whenever creation of a new endpoint slice object
 // is observed.
-
 func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlice) {
 	if proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized() {
 		proxier.Sync()
@@ -604,7 +581,6 @@ func (proxier *Proxier) OnEndpointSliceAdd(endpointSlice *discovery.EndpointSlic
 
 // OnEndpointSliceUpdate is called whenever modification of an existing endpoint
 // slice object is observed.
-
 func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.EndpointSlice) {
 	if proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, false) && proxier.isInitialized() {
 		proxier.Sync()
@@ -613,7 +589,6 @@ func (proxier *Proxier) OnEndpointSliceUpdate(_, endpointSlice *discovery.Endpoi
 
 // OnEndpointSliceDelete is called whenever deletion of an existing endpoint slice
 // object is observed.
-
 func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointSlice) {
 	if proxier.endpointsChanges.EndpointSliceUpdate(endpointSlice, true) && proxier.isInitialized() {
 		proxier.Sync()
@@ -622,7 +597,6 @@ func (proxier *Proxier) OnEndpointSliceDelete(endpointSlice *discovery.EndpointS
 
 // OnEndpointSlicesSynced is called once all the initial event handlers were
 // called and the state is fully propagated to local cache.
-
 func (proxier *Proxier) OnEndpointSlicesSynced() {
 	proxier.mu.Lock()
 	proxier.endpointSlicesSynced = true
@@ -635,7 +609,6 @@ func (proxier *Proxier) OnEndpointSlicesSynced() {
 
 // OnNodeAdd is called whenever creation of new node object
 // is observed.
-
 func (proxier *Proxier) OnNodeAdd(node *v1.Node) {
 	if node.Name != proxier.hostname {
 		klog.ErrorS(nil, "Received a watch event for a node that doesn't match the current node",
@@ -660,7 +633,6 @@ func (proxier *Proxier) OnNodeAdd(node *v1.Node) {
 
 // OnNodeUpdate is called whenever modification of an existing
 // node object is observed.
-
 func (proxier *Proxier) OnNodeUpdate(oldNode, node *v1.Node) {
 	if node.Name != proxier.hostname {
 		klog.ErrorS(nil, "Received a watch event for a node that doesn't match the current node",
@@ -685,7 +657,6 @@ func (proxier *Proxier) OnNodeUpdate(oldNode, node *v1.Node) {
 
 // OnNodeDelete is called whenever deletion of an existing node
 // object is observed.
-
 func (proxier *Proxier) OnNodeDelete(node *v1.Node) {
 	if node.Name != proxier.hostname {
 		klog.ErrorS(nil, "Received a watch event for a node that doesn't match the current node",
@@ -708,7 +679,6 @@ func (proxier *Proxier) OnNodeSynced() {
 // returns the associated 16 character hash. This is computed by hashing (sha256)
 // then encoding to base32 and truncating to 16 chars. We do this because IPTables
 // Chain Names must be <= 28 chars long, and the longer they are the harder they are to read.
-
 func portProtoHash(servicePortName string, protocol string) string {
 	hash := sha256.Sum256([]byte(servicePortName + protocol))
 	encoded := base32.StdEncoding.EncodeToString(hash[:])
@@ -729,7 +699,6 @@ const (
 // servicePortPolicyClusterChain returns the name of the KUBE-SVC-XXXX chain for a service, which is the
 // main iptables chain for that service, used for dispatching to endpoints when using `Cluster`
 // traffic policy.
-
 func servicePortPolicyClusterChain(servicePortName string, protocol string) utiliptables.Chain {
 	return utiliptables.Chain(servicePortPolicyClusterChainNamePrefix + portProtoHash(servicePortName, protocol))
 }
@@ -737,14 +706,12 @@ func servicePortPolicyClusterChain(servicePortName string, protocol string) util
 // servicePortPolicyLocalChainName returns the name of the KUBE-SVL-XXXX chain for a service, which
 // handles dispatching to local endpoints when using `Local` traffic policy. This chain only
 // exists if the service has `Local` internal or external traffic policy.
-
 func servicePortPolicyLocalChainName(servicePortName string, protocol string) utiliptables.Chain {
 	return utiliptables.Chain(servicePortPolicyLocalChainNamePrefix + portProtoHash(servicePortName, protocol))
 }
 
 // serviceFirewallChainName returns the name of the KUBE-FW-XXXX chain for a service, which
 // is used to implement the filtering for the LoadBalancerSourceRanges feature.
-
 func serviceFirewallChainName(servicePortName string, protocol string) utiliptables.Chain {
 	return utiliptables.Chain(serviceFirewallChainNamePrefix + portProtoHash(servicePortName, protocol))
 }
@@ -753,14 +720,12 @@ func serviceFirewallChainName(servicePortName string, protocol string) utiliptab
 // implements "short-circuiting" for internally-originated external-destination traffic when using
 // `Local` external traffic policy.  It forwards traffic from local sources to the KUBE-SVC-XXXX
 // chain and traffic from external sources to the KUBE-SVL-XXXX chain.
-
 func serviceExternalChainName(servicePortName string, protocol string) utiliptables.Chain {
 	return utiliptables.Chain(serviceExternalChainNamePrefix + portProtoHash(servicePortName, protocol))
 }
 
 // servicePortEndpointChainName returns the name of the KUBE-SEP-XXXX chain for a particular
 // service endpoint.
-
 func servicePortEndpointChainName(servicePortName string, protocol string, endpoint string) utiliptables.Chain {
 	hash := sha256.Sum256([]byte(servicePortName + protocol + endpoint))
 	encoded := base32.StdEncoding.EncodeToString(hash[:])
@@ -789,7 +754,6 @@ func isServiceChainName(chainString string) bool {
 // risk sending more traffic to it, all of which will be lost.
 // This assumes the proxier mutex is held
 // TODO: move it to util
-
 func (proxier *Proxier) deleteEndpointConnections(connectionMap []proxy.ServiceEndpoint) {
 	for _, epSvcPair := range connectionMap {
 		if svcInfo, ok := proxier.serviceMap[epSvcPair.ServicePortName]; ok && conntrack.IsClearConntrackNeeded(svcInfo.Protocol()) {
@@ -836,30 +800,12 @@ func (proxier *Proxier) appendServiceCommentLocked(args []string, svcName string
 	return append(args, "-m", "comment", "--comment", svcName)
 }
 
-// this flag is used to check whether to start the links count program.
-// it initializes once and then run in loop.
-var linksCountInit = 0
-
 // This is where all of the iptables-save/restore calls happen.
 // The only other iptables rules are those that are setup in iptablesInit()
 // This assumes proxier.mu is NOT held
 func (proxier *Proxier) syncProxyRules() {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
-
-	if linksCountInit == 0 {
-		if _, ok := proxier.nodeLabels["node-role.kubernetes.io/control-plane"]; ok {
-			// start the links count program
-			go linkscount.InitLinksCount()
-			linksCountInit = 1
-		} else if _, ok := proxier.nodeLabels["node-role.kubernetes.io/master"]; ok {
-			// start the links count program
-			go linkscount.InitLinksCount()
-			linksCountInit = 1
-		}
-		// not master node
-		linksCountInit = 1
-	}
 
 	// don't sync rules till we've received services and endpoints
 	if !proxier.isInitialized() {
@@ -1070,8 +1016,7 @@ func (proxier *Proxier) syncProxyRules() {
 		// allLocallyReachableEndpoints is the set of all endpoints that can be routed to
 		// from this node, given the service's traffic policies. hasEndpoints is true
 		// if the service has any usable endpoints on any node, not just this one.
-
-		allLocallyReachableEndpoints, endpointsLatency, hasEndpoints := proxy.GetEndpointsWithLatency(allEndpoints, proxier.hostname)
+		clusterEndpoints, localEndpoints, allLocallyReachableEndpoints, hasEndpoints := proxy.CategorizeEndpoints(allEndpoints, svcInfo, proxier.nodeLabels)
 
 		// Generate the per-endpoint chains.
 		for _, ep := range allLocallyReachableEndpoints {
@@ -1107,22 +1052,21 @@ func (proxier *Proxier) syncProxyRules() {
 			proxier.natRules.Write(args)
 		}
 
-		// --------------------------
 		// These chains represent the sets of endpoints to use when internal or
 		// external traffic policy is "Cluster" vs "Local".
-		clusterPolicyChain := svcInfo.clusterPolicyChainName // kube-svc-
-		// localPolicyChain := svcInfo.localPolicyChainName     // kube-svl-
+		clusterPolicyChain := svcInfo.clusterPolicyChainName
+		localPolicyChain := svcInfo.localPolicyChainName
 
 		// These chains designate which policy chain to use for internal- and
 		// external-destination traffic.
 		internalPolicyChain := clusterPolicyChain
 		externalPolicyChain := clusterPolicyChain
-		// if svcInfo.InternalPolicyLocal() {    // no local policy again
-		// 	internalPolicyChain = localPolicyChain
-		// }
-		// if svcInfo.ExternalPolicyLocal() {
-		// 	externalPolicyChain = localPolicyChain
-		// }
+		if svcInfo.InternalPolicyLocal() {
+			internalPolicyChain = localPolicyChain
+		}
+		if svcInfo.ExternalPolicyLocal() {
+			externalPolicyChain = localPolicyChain
+		}
 
 		// These chains are where *ALL* rules which match traffic that is
 		// service-destined should jump.  ClusterIP traffic is considered
@@ -1130,10 +1074,6 @@ func (proxier *Proxier) syncProxyRules() {
 		// considered "external".
 		internalTrafficChain := internalPolicyChain
 		externalTrafficChain := svcInfo.externalChainName // eventually jumps to externalPolicyChain
-
-		//  externalTrafficChain   KUBE-EXT
-		//  clusterPolicyChain   KUBE-SVC
-		//  internalPolicyChain  KUBE-SVL
 
 		// Declare the clusterPolicyChain if needed.
 		if hasEndpoints && svcInfo.UsesClusterEndpoints() {
@@ -1146,15 +1086,15 @@ func (proxier *Proxier) syncProxyRules() {
 			activeNATChains[clusterPolicyChain] = true
 		}
 
-		// // Declare the localPolicyChain if needed.
-		// if hasEndpoints && svcInfo.UsesLocalEndpoints() {
-		// 	if chain, ok := existingNATChains[localPolicyChain]; ok {
-		// 		proxier.natChains.WriteBytes(chain)
-		// 	} else {
-		// 		proxier.natChains.Write(utiliptables.MakeChainLine(localPolicyChain))
-		// 	}
-		// 	activeNATChains[localPolicyChain] = true
-		// }
+		// Declare the localPolicyChain if needed.
+		if hasEndpoints && svcInfo.UsesLocalEndpoints() {
+			if chain, ok := existingNATChains[localPolicyChain]; ok {
+				proxier.natChains.WriteBytes(chain)
+			} else {
+				proxier.natChains.Write(utiliptables.MakeChainLine(localPolicyChain))
+			}
+			activeNATChains[localPolicyChain] = true
+		}
 
 		// If any "external" destinations are enabled, set up external traffic
 		// handling.  All captured traffic for all external destinations should
@@ -1168,48 +1108,47 @@ func (proxier *Proxier) syncProxyRules() {
 			}
 			activeNATChains[externalTrafficChain] = true
 
-			// if !svcInfo.ExternalPolicyLocal() {
-			// 	// If we are using non-local endpoints we need to masquerade,
-			// 	// in case we cross nodes.
-			// 	proxier.natRules.Write(
-			// 		"-A", string(externalTrafficChain),
-			// 		"-m", "comment", "--comment", fmt.Sprintf(`"masquerade traffic for %s external destinations"`, svcNameString),
-			// 		"-j", string(KubeMarkMasqChain))
-			// }
-			// else {
-			// 	// If we are only using same-node endpoints, we can retain the
-			// 	// source IP in most cases.
+			if !svcInfo.ExternalPolicyLocal() {
+				// If we are using non-local endpoints we need to masquerade,
+				// in case we cross nodes.
+				proxier.natRules.Write(
+					"-A", string(externalTrafficChain),
+					"-m", "comment", "--comment", fmt.Sprintf(`"masquerade traffic for %s external destinations"`, svcNameString),
+					"-j", string(KubeMarkMasqChain))
+			} else {
+				// If we are only using same-node endpoints, we can retain the
+				// source IP in most cases.
 
-			// 	if proxier.localDetector.IsImplemented() {
-			// 		// Treat all locally-originated pod -> external destination
-			// 		// traffic as a special-case.  It is subject to neither
-			// 		// form of traffic policy, which simulates going up-and-out
-			// 		// to an external load-balancer and coming back in.
-			// 		proxier.natRules.Write(
-			// 			"-A", string(externalTrafficChain),
-			// 			"-m", "comment", "--comment", fmt.Sprintf(`"pod traffic for %s external destinations"`, svcNameString),
-			// 			proxier.localDetector.IfLocal(),
-			// 			"-j", string(clusterPolicyChain))
-			// 	}
+				if proxier.localDetector.IsImplemented() {
+					// Treat all locally-originated pod -> external destination
+					// traffic as a special-case.  It is subject to neither
+					// form of traffic policy, which simulates going up-and-out
+					// to an external load-balancer and coming back in.
+					proxier.natRules.Write(
+						"-A", string(externalTrafficChain),
+						"-m", "comment", "--comment", fmt.Sprintf(`"pod traffic for %s external destinations"`, svcNameString),
+						proxier.localDetector.IfLocal(),
+						"-j", string(clusterPolicyChain))
+				}
 
-			// 	// Locally originated traffic (not a pod, but the host node)
-			// 	// still needs masquerade because the LBIP itself is a local
-			// 	// address, so that will be the chosen source IP.
-			// 	proxier.natRules.Write(
-			// 		"-A", string(externalTrafficChain),
-			// 		"-m", "comment", "--comment", fmt.Sprintf(`"masquerade LOCAL traffic for %s external destinations"`, svcNameString),
-			// 		"-m", "addrtype", "--src-type", "LOCAL",
-			// 		"-j", string(KubeMarkMasqChain))
+				// Locally originated traffic (not a pod, but the host node)
+				// still needs masquerade because the LBIP itself is a local
+				// address, so that will be the chosen source IP.
+				proxier.natRules.Write(
+					"-A", string(externalTrafficChain),
+					"-m", "comment", "--comment", fmt.Sprintf(`"masquerade LOCAL traffic for %s external destinations"`, svcNameString),
+					"-m", "addrtype", "--src-type", "LOCAL",
+					"-j", string(KubeMarkMasqChain))
 
-			// 	// Redirect all src-type=LOCAL -> external destination to the
-			// 	// policy=cluster chain. This allows traffic originating
-			// 	// from the host to be redirected to the service correctly.
-			// 	proxier.natRules.Write(
-			// 		"-A", string(externalTrafficChain),
-			// 		"-m", "comment", "--comment", fmt.Sprintf(`"route LOCAL traffic for %s external destinations"`, svcNameString),
-			// 		"-m", "addrtype", "--src-type", "LOCAL",
-			// 		"-j", string(clusterPolicyChain))
-			// }
+				// Redirect all src-type=LOCAL -> external destination to the
+				// policy=cluster chain. This allows traffic originating
+				// from the host to be redirected to the service correctly.
+				proxier.natRules.Write(
+					"-A", string(externalTrafficChain),
+					"-m", "comment", "--comment", fmt.Sprintf(`"route LOCAL traffic for %s external destinations"`, svcNameString),
+					"-m", "addrtype", "--src-type", "LOCAL",
+					"-j", string(clusterPolicyChain))
+			}
 
 			// Anything else falls thru to the appropriate policy chain.
 			proxier.natRules.Write(
@@ -1238,7 +1177,7 @@ func (proxier *Proxier) syncProxyRules() {
 				proxier.natRules.Write(
 					"-A", string(internalTrafficChain),
 					args,
-					proxier.localDetector.IfNotLocal(), // can know ifNotLocal: []string{"!", "-s", cidr},
+					proxier.localDetector.IfNotLocal(),
 					"-j", string(KubeMarkMasqChain))
 			}
 			proxier.natRules.Write(
@@ -1406,36 +1345,35 @@ func (proxier *Proxier) syncProxyRules() {
 			)
 		}
 
-		// if svcInfo.UsesClusterEndpoints() {
-		// 	// Write rules jumping from clusterPolicyChain to clusterEndpoints
-		// 	proxier.writeServiceToEndpointRules(svcNameString, svcInfo, clusterPolicyChain, clusterEndpoints, args)
-		// }
-		// if svcInfo.UsesLocalEndpoints() {
-		// 	if len(localEndpoints) != 0 {
-		// 		// Write rules jumping from localPolicyChain to localEndpointChains
-		// 		proxier.writeServiceToEndpointRules(svcNameString, svcInfo, localPolicyChain, localEndpoints, args)
-		// 	} else {
-		// 		if svcInfo.InternalPolicyLocal() && utilfeature.DefaultFeatureGate.Enabled(features.ServiceInternalTrafficPolicy) {
-		// 			serviceNoLocalEndpointsTotalInternal++
-		// 		}
-		// 		if svcInfo.ExternalPolicyLocal() {
-		// 			serviceNoLocalEndpointsTotalExternal++
-		// 		}
-		// 		if hasEndpoints {
-		// 			// Blackhole all traffic since there are no local endpoints
-		// 			args = append(args[:0],
-		// 				"-A", string(localPolicyChain),
-		// 				"-m", "comment", "--comment",
-		// 				fmt.Sprintf(`"%s has no local endpoints"`, svcNameString),
-		// 				"-j",
-		// 				string(KubeMarkDropChain),
-		// 			)
-		// 			proxier.natRules.Write(args)
-		// 		}
-		// 	}
-		// }
-		proxier.writeServiceToEndpointRules(svcNameString, svcInfo, clusterPolicyChain, allLocallyReachableEndpoints, args, endpointsLatency)
+		if svcInfo.UsesClusterEndpoints() {
+			// Write rules jumping from clusterPolicyChain to clusterEndpoints
+			proxier.writeServiceToEndpointRules(svcNameString, svcInfo, clusterPolicyChain, clusterEndpoints, args)
+		}
 
+		if svcInfo.UsesLocalEndpoints() {
+			if len(localEndpoints) != 0 {
+				// Write rules jumping from localPolicyChain to localEndpointChains
+				proxier.writeServiceToEndpointRules(svcNameString, svcInfo, localPolicyChain, localEndpoints, args)
+			} else {
+				if svcInfo.InternalPolicyLocal() && utilfeature.DefaultFeatureGate.Enabled(features.ServiceInternalTrafficPolicy) {
+					serviceNoLocalEndpointsTotalInternal++
+				}
+				if svcInfo.ExternalPolicyLocal() {
+					serviceNoLocalEndpointsTotalExternal++
+				}
+				if hasEndpoints {
+					// Blackhole all traffic since there are no local endpoints
+					args = append(args[:0],
+						"-A", string(localPolicyChain),
+						"-m", "comment", "--comment",
+						fmt.Sprintf(`"%s has no local endpoints"`, svcNameString),
+						"-j",
+						string(KubeMarkDropChain),
+					)
+					proxier.natRules.Write(args)
+				}
+			}
+		}
 	}
 
 	// Delete chains no longer in use.
@@ -1592,7 +1530,7 @@ func (proxier *Proxier) syncProxyRules() {
 	proxier.deleteEndpointConnections(endpointUpdateResult.StaleEndpoints)
 }
 
-func (proxier *Proxier) writeServiceToEndpointRules(svcNameString string, svcInfo proxy.ServicePort, svcChain utiliptables.Chain, endpoints []proxy.Endpoint, args []string, endpointsLatency []time.Duration) {
+func (proxier *Proxier) writeServiceToEndpointRules(svcNameString string, svcInfo proxy.ServicePort, svcChain utiliptables.Chain, endpoints []proxy.Endpoint, args []string) {
 	// First write session affinity rules, if applicable.
 	if svcInfo.SessionAffinityType() == v1.ServiceAffinityClientIP {
 		for _, ep := range endpoints {
@@ -1616,9 +1554,6 @@ func (proxier *Proxier) writeServiceToEndpointRules(svcNameString string, svcInf
 	}
 
 	// Now write loadbalancing rules.
-	probability := LatencyToProbability(endpointsLatency)
-	probabilityString := ProbabilityFloatToString(probability)
-	klog.Infof("svc endpoints probability are: %v\n", probabilityString)
 	numEndpoints := len(endpoints)
 	for i, ep := range endpoints {
 		epInfo, ok := ep.(*endpointsInfo)
@@ -1634,40 +1569,9 @@ func (proxier *Proxier) writeServiceToEndpointRules(svcNameString string, svcInf
 			args = append(args,
 				"-m", "statistic",
 				"--mode", "random",
-				"--probability", probabilityString[i])
+				"--probability", proxier.probability(numEndpoints-i))
 		}
 		// The final (or only if n == 1) rule is a guaranteed match.
 		proxier.natRules.Write(args, "-j", string(epInfo.ChainName))
 	}
-}
-
-func LatencyToProbability(endpointsLatency []time.Duration) (probability []float64) {
-
-	// turn the time.Duration to float64 to calculate probability
-	// and convert low latency to high value
-	// sum is used to calculate the probability
-	sum := float64(0)
-	for _, t := range endpointsLatency {
-		v := t.Seconds() * 1e3
-		if v == 0 {
-			klog.Error("calculate probability failed, the latency is 0ms, division by 0 will happen")
-		}
-		v = 1 / v
-		sum += v
-		probability = append(probability, v)
-	}
-
-	// here we use a lottery algorithm to calculate probability
-	for i, p := range probability {
-		probability[i] = p / sum
-		sum -= p
-	}
-	return
-}
-
-func ProbabilityFloatToString(probability []float64) (probabilityString []string) {
-	for _, p := range probability {
-		probabilityString = append(probabilityString, fmt.Sprintf("%0.10f", p))
-	}
-	return
 }
