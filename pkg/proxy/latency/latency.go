@@ -28,6 +28,10 @@ func GetNodeLatency(dst, nodeName string) {
 	sumLatency := time.Second * 0
 	for i := 0; i < 5; i++ {
 		latency := DetectLatency(dst)
+		if latency == 0 {
+			nodeName = "unknown"
+			latency = 1
+		}
 		sumLatency += latency
 	}
 	latency := sumLatency / 5
