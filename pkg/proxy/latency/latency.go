@@ -28,7 +28,7 @@ func GetNodeLatency(dst, nodeName string) {
 	sumLatency := time.Second * 0
 	for i := 0; i < 5; i++ {
 		latency := DetectLatency(dst)
-		if latency == 0 {
+		if latency == 0 { //sometimes a node cannot access the endpoints of some services, for example, the ip of the dns of the k8s cluster. At that time, we set them in a equal latency
 			nodeName = "unknown"
 			latency = 1
 		}
