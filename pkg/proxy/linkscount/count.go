@@ -164,7 +164,8 @@ func linksCount() {
 			}
 
 			linksNumTemp := strings.Split(stdout.String(), "\n")
-			linksNum := strings.Split(linksNumTemp[2], " ")[0]
+			str := deletePrefixSpaces(linksNumTemp[2])
+			linksNum := strings.Split(str, " ")[0]
 			outputWriter.WriteString(podIp + " " + linksNum + "\n")
 			outputWriter.Flush()
 			//log.Printf("out:\n%s\nerr:\n%s", linksNum, stderr.String())
@@ -197,7 +198,7 @@ func copyLinksToKubeproxyPod(kubeproxyPod string, wg *sync.WaitGroup) {
 	}
 	cmd.Env = append(cmd.Env, KUBECONFIG)
 	if err = cmd.Run(); err != nil {
-		klog.Fatalf("count.go copyLinksToKubeproxyPod() createFileLock failed, failed to call cmd.Run(): %v", err)
+		klog.Errorf("count.go copyLinksToKubeproxyPod() createFileLock failed, failed to call cmd.Run(): %v", err)
 	}
 
 	//Check whether the directory 0 exists, the directory 0 was created by kube-proxy itself, indicating that it wants to read the links file
@@ -215,7 +216,7 @@ func copyLinksToKubeproxyPod(kubeproxyPod string, wg *sync.WaitGroup) {
 		time.Sleep(time.Second * 1)
 	} else {
 		// Maybe the kubeproxy pod no longer exists
-		klog.Errorf("count.go line 208  directory 0 doesn't exist failed to call cmd.Run(): %v", err)
+		//klog.Errorf("count.go line 208  directory 0 doesn't exist failed to call cmd.Run(): %v", err)
 	}
 
 	// do the actual operation to copy the links file to all kube-proxy pods

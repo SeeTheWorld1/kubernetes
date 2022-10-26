@@ -43,11 +43,17 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 	wg := new(sync.WaitGroup)
 	var nodeName string
 	t := 20 * time.Microsecond // if the endpoint is on this node, we set its latency to 0.02ms by default
+	// Because the following code does not guarantee that
+	// the ip with the node's latency set to -1 can be successfully pinged, it needs some remedial measures
+	endpointsStillWithLatencyFalse := make([]Endpoint, 0)
 	for _, dst := range allReachableEndpoints {
 		nodeName = dst.GetNodeName()
 		latency.NodeLatency.Lock()
 		// this operation didn't consider concurrent read
-		_, ok := latency.NodeLatency.TimeMap[nodeName]
+		v, ok := latency.NodeLatency.TimeMap[nodeName]
+		if v == -1 {
+			endpointsStillWithLatencyFalse = append(endpointsStillWithLatencyFalse, dst)
+		}
 		if !ok {
 			if nodeName == hostname {
 				latency.NodeLatency.TimeMap[dst.GetNodeName()] = t
@@ -70,8 +76,21 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 	// make sure we get the latency per node
 	wg.Wait()
 
+	if len(endpointsStillWithLatencyFalse) > 0 {
+		wg := new(sync.WaitGroup)
+		for _, edp := range endpointsStillWithLatencyFalse {
+			latency.NodeLatency.Lock()
+			if latency.NodeLatency.TimeMap[edp.GetNodeName()] == -1 {
+				wg.Add(1)
+				go GetNodeLatency(wg, edp.IP(), edp.GetNodeName())
+			}
+			latency.NodeLatency.Unlock()
+		}
+		wg.Wait()
+	}
+
 	// check if has links file to adjust the endpoints' probability
-	_, err := os.Stat("/root/kube-proxy/links") //Note the pathname
+	_, err := os.Stat("/root/links") //Note the pathname
 	if err == nil {
 		// First create file 0 to represent the lock
 		fTmp, err := os.OpenFile("/tmp/0", os.O_WRONLY|os.O_CREATE, 0666)
@@ -92,7 +111,7 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 
 		// first copy /root/kube-proxy/links to /tmp/links
 		// then read from /tmp/links
-		cmd := exec.Command("cp", "/root/kube-proxy/links", "/tmp/")
+		cmd := exec.Command("cp", "/root/links", "/tmp/")
 		if err = cmd.Run(); err != nil {
 			klog.Errorf("proxy traffic GetEndpointsWithLatency failed to copy /root/kube-proxy/links to /tmp/links: %v", err)
 		}
@@ -158,7 +177,7 @@ func getEndpointLinks() map[string]int64 {
 		ipAndLinks := strings.Split(links, " ")
 		linksInt64, err := strconv.ParseInt(ipAndLinks[1][:len(ipAndLinks[1])-1], 10, 64) // the last character of the string is "\n" so it needs to be processed
 		if err != nil {
-			klog.Errorf("proxy traffic getEndpointLinks string to int64 error: %v", err)
+			klog.Errorf("proxy traffic getEndpointLinks string to int64 error: %v, ipandlinks: %v", err, links)
 		}
 		endpointLinks[ipAndLinks[0]] = linksInt64
 	}
