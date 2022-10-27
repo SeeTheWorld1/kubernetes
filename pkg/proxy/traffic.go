@@ -76,6 +76,8 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 	// make sure we get the latency per node
 	wg.Wait()
 
+	// most time this happend because of master's endpoints
+	// and if it is still -1 latency, don't surprise
 	if len(endpointsStillWithLatencyFalse) > 0 {
 		wg := new(sync.WaitGroup)
 		for _, edp := range endpointsStillWithLatencyFalse {

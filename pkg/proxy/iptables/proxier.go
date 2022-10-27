@@ -1168,6 +1168,11 @@ func (proxier *Proxier) syncProxyRules() {
 			}
 			activeNATChains[externalTrafficChain] = true
 
+			proxier.natRules.Write(
+				"-A", string(externalTrafficChain),
+				"-m", "comment", "--comment", fmt.Sprintf(`"masquerade traffic for %s external destinations"`, svcNameString),
+				"-j", string(KubeMarkMasqChain))
+
 			// if !svcInfo.ExternalPolicyLocal() {
 			// 	// If we are using non-local endpoints we need to masquerade,
 			// 	// in case we cross nodes.
