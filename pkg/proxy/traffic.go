@@ -124,12 +124,6 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 			klog.Errorf("proxy traffic GetEndpointsWithLatency remove lock file 0 error: %v", err)
 		}
 
-		// delete /root/links after the copy of file links
-		err = os.Remove("/root/links")
-		if err != nil {
-			klog.Errorf("proxy traffic GetEndpointsWithLatency remove /root/links error: %v", err)
-		}
-
 		// get the endpoints' links
 		tmpvar := make([]int64, 0) // temp var use to record links
 		endpointLinks := getEndpointLinks()
@@ -155,6 +149,7 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 		}
 		latency.NodeLatency.RUnlock()
 	}
+	klog.Infof("Node latency map: %v", latency.NodeLatency.TimeMap)
 
 	return
 }

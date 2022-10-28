@@ -25,6 +25,7 @@ import (
 	"encoding/base32"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1441,6 +1442,15 @@ func (proxier *Proxier) syncProxyRules() {
 		// }
 		proxier.writeServiceToEndpointRules(svcNameString, svcInfo, clusterPolicyChain, allLocallyReachableEndpoints, args, endpointsLatency)
 
+	}
+
+	// delete /root/links after the copy of file links
+	_, err = os.Stat("/root/links")
+	if err == nil {
+		err = os.Remove("/root/links")
+		if err != nil {
+			klog.Errorf("proxy traffic GetEndpointsWithLatency remove /root/links error: %v", err)
+		}
 	}
 
 	// Delete chains no longer in use.
