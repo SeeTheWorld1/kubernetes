@@ -29,8 +29,8 @@ func GetNodeLatency(dst, nodeName string) {
 	for i := 0; i < 5; i++ {
 		latency := DetectLatency(dst)
 		if latency == 0 { //sometimes a node cannot access the endpoints of some services, for example, the ip of the dns of the k8s cluster. At that time, we set them in a equal latency
-			latency = -1
 			klog.Errorf("ping 0: %s", dst)
+			return
 		}
 		sumLatency += latency
 	}
@@ -49,7 +49,7 @@ func DetectLatency(dst string) time.Duration {
 	}
 
 	// threshold is changeable
-	pinger.Timeout = time.Second * 5
+	pinger.Timeout = time.Second * 2
 	pinger.Count = 1
 	err = pinger.Run() // Blocks until finished.
 

@@ -51,7 +51,7 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 		latency.NodeLatency.Lock()
 		// this operation didn't consider concurrent read
 		v, ok := latency.NodeLatency.TimeMap[nodeName]
-		if v == -1 {
+		if v == 400*time.Millisecond {
 			endpointsStillWithLatencyFalse = append(endpointsStillWithLatencyFalse, dst)
 		}
 		if !ok {
@@ -63,7 +63,7 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 
 			// -1 means the latency is not obtained by ping, there may be a bug in this operation
 			// we guess and believe the endpoints passed is reachable
-			latency.NodeLatency.TimeMap[dst.GetNodeName()] = -1
+			latency.NodeLatency.TimeMap[dst.GetNodeName()] = time.Millisecond * 400
 			latency.NodeLatency.Unlock()
 			wg.Add(1)
 
@@ -76,11 +76,13 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 	// make sure we get the latency per node
 	wg.Wait()
 
+	// most time this happend because of master's endpoints
+	// and if it is still -1 latency, don't surprise
 	if len(endpointsStillWithLatencyFalse) > 0 {
 		wg := new(sync.WaitGroup)
 		for _, edp := range endpointsStillWithLatencyFalse {
 			latency.NodeLatency.Lock()
-			if latency.NodeLatency.TimeMap[edp.GetNodeName()] == -1 {
+			if latency.NodeLatency.TimeMap[edp.GetNodeName()] == time.Millisecond*400 {
 				wg.Add(1)
 				go GetNodeLatency(wg, edp.IP(), edp.GetNodeName())
 			}
@@ -147,6 +149,7 @@ func GetEndpointsWithLatency(endpoints []Endpoint, hostname string) (allReachabl
 		}
 		latency.NodeLatency.RUnlock()
 	}
+	klog.Infof("Node latency map: %v", latency.NodeLatency.TimeMap)
 
 	return
 }
