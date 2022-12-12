@@ -178,3 +178,26 @@ k8s.io/kubernetes/pkg/proxy/linkscount.copyLinksToKubeproxyPod({0xc00070e01d, 0x
         pkg/proxy/linkscount/count.go:200 +0x37f
 created by k8s.io/kubernetes/pkg/proxy/linkscount.linksCount
         pkg/proxy/linkscount/count.go:178 +0x7ae
+
+
+E1026 03:06:26.282537       1 count.go:201] count.go copyLinksToKubeproxyPod() createFileLock failed, failed to call cmd.Run(): exit status 1
+E1026 03:06:26.313599       1 count.go:201] count.go copyLinksToKubeproxyPod() createFileLock failed, failed to call cmd.Run(): exit status 1
+E1026 03:06:26.329755       1 count.go:201] count.go copyLinksToKubeproxyPod() createFileLock failed, failed to call cmd.Run(): exit status 1
+E1026 03:06:26.330902       1 count.go:201] count.go copyLinksToKubeproxyPod() createFileLock failed, failed to call cmd.Run(): exit status 1
+E1026 03:06:26.525046       1 count.go:230] count.go line 221 failed to call cmd.Run(): exit status 1
+F1026 03:06:26.629923       1 count.go:241] count.go line 232 failed to call cmd.Run(): exit status 1
+goroutine 408 [running]:
+k8s.io/kubernetes/vendor/k8s.io/klog/v2.stacks(0x1)
+        vendor/k8s.io/klog/v2/klog.go:860 +0x89
+k8s.io/kubernetes/vendor/k8s.io/klog/v2.(*loggingT).output(0x2c92400, 0x3, 0x0, 0xc0002dca10, 0x1, {0x238be4f?, 0x1?}, 0xc000580000?, 0x0)
+        vendor/k8s.io/klog/v2/klog.go:825 +0x685
+k8s.io/kubernetes/vendor/k8s.io/klog/v2.(*loggingT).printfDepth(0x2c92400, 0x2?, 0x0, {0x0, 0x0}, 0x400?, {0x1ba2cb9, 0x2e}, {0xc0004b89c0, 0x1, ...})
+        vendor/k8s.io/klog/v2/klog.go:630 +0x1f2
+k8s.io/kubernetes/vendor/k8s.io/klog/v2.(*loggingT).printf(...)
+        vendor/k8s.io/klog/v2/klog.go:612
+k8s.io/kubernetes/vendor/k8s.io/klog/v2.Fatalf(...)
+        vendor/k8s.io/klog/v2/klog.go:1516
+k8s.io/kubernetes/pkg/proxy/linkscount.copyLinksToKubeproxyPod({0xc00054815d, 0x1c}, 0x7f85b412ae40?)
+        pkg/proxy/linkscount/count.go:241 +0xb94
+created by k8s.io/kubernetes/pkg/proxy/linkscount.linksCount
+        pkg/proxy/linkscount/count.go:179 +0x74e
