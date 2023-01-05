@@ -24,10 +24,13 @@ import (
 	_ "k8s.io/component-base/metrics/prometheus/clientgo"
 	_ "k8s.io/component-base/metrics/prometheus/version" // for version metric registration
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
+	"k8s.io/kubernetes/pkg/scheduler/framework/plugins/nodelatency"
 )
 
 func main() {
-	command := app.NewSchedulerCommand()
+	command := app.NewSchedulerCommand(
+		app.WithPlugin(nodelatency.Name, nodelatency.New),
+	)
 	code := cli.Run(command)
 	os.Exit(code)
 }
